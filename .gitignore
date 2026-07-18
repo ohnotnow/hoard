@@ -1,0 +1,5 @@
+/hoard
+hoard-*
+*.db
+*.db-shm
+*.db-wal
