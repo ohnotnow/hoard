@@ -1,0 +1,28 @@
+# hoard source configuration.
+#
+# `hoard config init` writes this starter file to the right place for your
+# platform (run `hoard config` any time to see the path and status).
+#
+# Edit the sources below, then `hoard sync` refreshes everything, or
+# `hoard sync LABEL` refreshes one source.
+#
+# url forms:
+#   ssh://host/path         - runs `find path -type f` over ssh (respects
+#                             your ~/.ssh/config aliases, keys, ports)
+#   ssh://user@host:2222/path
+#   /a/local/path           - walks a local or mounted directory
+#
+# generic: folder/drive-label names that must never be treated as programme
+# titles (drive labels, junk-drawer folder names specific to that source).
+
+sources:
+  - label: mediabox
+    url: ssh://mediabox/mnt/media
+    generic: [mediabox]
+
+  - label: old-usb
+    url: ssh://oldbox/var/media/usb-drive-01
+    generic: [usb-drive-01]
+
+  - label: local-archive
+    url: /Volumes/Archive/video

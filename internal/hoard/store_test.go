@@ -93,6 +93,17 @@ func TestIngestAndHave(t *testing.T) {
 		}
 	})
 
+	t.Run("reverse containment", func(t *testing.T) {
+		// Stored key lacks the article; a longer query must still find it.
+		matches, err := s.Have(ctx, "the fawlty towers", false)
+		if err != nil {
+			t.Fatalf("have: %v", err)
+		}
+		if len(matches) != 1 || matches[0].Title != "Fawlty Towers" {
+			t.Errorf("matches = %+v", matches)
+		}
+	})
+
 	t.Run("miss", func(t *testing.T) {
 		matches, err := s.Have(ctx, "the omega factor", false)
 		if err != nil {

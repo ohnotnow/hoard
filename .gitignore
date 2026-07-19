@@ -1,5 +1,9 @@
 /hoard
-hoard-*
+/hoard-*
 *.db
 *.db-shm
 *.db-wal
+config.yaml
+__pycache__/
+.ait/
+.ant/

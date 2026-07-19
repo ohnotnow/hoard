@@ -181,6 +181,12 @@ func (s *Store) Have(ctx context.Context, query string, loose bool) ([]TitleMatc
 		{`SELECT DISTINCT t.id FROM titles t
 			LEFT JOIN aliases a ON a.title_id = t.id
 			WHERE t.key LIKE '%' || ? || '%' OR a.alias_key LIKE '%' || ? || '%'`, []any{key, key}},
+		// Reverse containment: the stored key appears word-bounded inside a
+		// longer query ("the omega factor" finds key "omega factor").
+		{`SELECT DISTINCT t.id FROM titles t
+			LEFT JOIN aliases a ON a.title_id = t.id
+			WHERE ' ' || ? || ' ' LIKE '% ' || t.key || ' %'
+			   OR ' ' || ? || ' ' LIKE '% ' || a.alias_key || ' %'`, []any{key, key}},
 	}
 	if loose {
 		var conds []string

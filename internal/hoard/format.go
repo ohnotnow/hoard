@@ -59,6 +59,23 @@ func printAliases(aliases []AliasRow) {
 	w.Flush()
 }
 
+func printConfigStatus(status ConfigStatus) {
+	switch {
+	case !status.ConfigExists:
+		fmt.Printf("config: %s (missing — run `hoard config init` to create it)\n", status.ConfigPath)
+	case status.ConfigError != "":
+		fmt.Printf("config: %s (INVALID: %s)\n", status.ConfigPath, status.ConfigError)
+	default:
+		fmt.Printf("config: %s (ok — %d sources: %s)\n",
+			status.ConfigPath, len(status.Sources), strings.Join(status.Sources, ", "))
+	}
+	if status.DBExists {
+		fmt.Printf("db:     %s\n", status.DBPath)
+	} else {
+		fmt.Printf("db:     %s (missing — created on first ingest/sync)\n", status.DBPath)
+	}
+}
+
 func printStats(stats StatsResult) {
 	fmt.Printf("files: %d (video: %d, audio: %d, other: %d)\n",
 		stats.Files, stats.Videos, stats.Audio, stats.Other)

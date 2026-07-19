@@ -14,6 +14,7 @@ import (
 const usageText = `hoard — what does this media library actually contain?
 
 Usage:
+  hoard sync [--config PATH] [LABEL]...
   hoard ingest --source LABEL [--generic NAME]... (FILE|-)
   hoard have [--loose] [--json] QUERY
   hoard alias add TITLE ALIAS | alias rm ALIAS | alias list [--json]
@@ -21,6 +22,7 @@ Usage:
   hoard titles [--min-items N] [--json]
   hoard sources [--json]
   hoard stats [--json]
+  hoard config [init] [--json]
   hoard version
 
 All commands accept --db PATH (default: <user-config-dir>/hoard/library.db).
@@ -34,6 +36,8 @@ func Run(args []string) error {
 	}
 	cmd, rest := args[0], args[1:]
 	switch cmd {
+	case "sync":
+		return runSync(rest)
 	case "ingest":
 		return runIngest(rest)
 	case "have":
@@ -48,6 +52,8 @@ func Run(args []string) error {
 		return runSources(rest)
 	case "stats":
 		return runStats(rest)
+	case "config":
+		return runConfig(rest)
 	case "version":
 		fmt.Println(Version)
 		return nil
@@ -83,16 +89,125 @@ func parseFlags(fs *flag.FlagSet, args []string) error {
 	return nil
 }
 
+func resolveDBPath(flagValue string) (string, error) {
+	if flagValue != "" {
+		return flagValue, nil
+	}
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", internalError("cannot determine config dir: " + err.Error())
+	}
+	return filepath.Join(configDir, "hoard", "library.db"), nil
+}
+
 func openStore(ctx context.Context, dbPath string) (*Store, error) {
-	path := dbPath
-	if path == "" {
-		configDir, err := os.UserConfigDir()
-		if err != nil {
-			return nil, internalError("cannot determine config dir: " + err.Error())
-		}
-		path = filepath.Join(configDir, "hoard", "library.db")
+	path, err := resolveDBPath(dbPath)
+	if err != nil {
+		return nil, err
 	}
 	return OpenStore(ctx, path)
+}
+
+func runConfig(args []string) error {
+	initMode := len(args) > 0 && args[0] == "init"
+	if initMode {
+		args = args[1:]
+	}
+	fs, dbPath, jsonOut := newFlagSet("config")
+	configPath := fs.String("config", "", "config file path")
+	if err := parseFlags(fs, args); err != nil {
+		return err
+	}
+
+	cfgPath := *configPath
+	if cfgPath == "" {
+		var err error
+		if cfgPath, err = defaultConfigPath(); err != nil {
+			return err
+		}
+	}
+	resolvedDB, err := resolveDBPath(*dbPath)
+	if err != nil {
+		return err
+	}
+
+	if fs.NArg() != 0 {
+		return usageError("config: expected no arguments or `init`")
+	}
+
+	if initMode {
+		if err := configInit(cfgPath); err != nil {
+			return err
+		}
+		fmt.Printf("wrote starter config to %s — edit it, then run `hoard sync`\n", cfgPath)
+		return nil
+	}
+
+	status := configStatus(cfgPath, resolvedDB)
+	if *jsonOut {
+		return printJSON(status)
+	}
+	printConfigStatus(status)
+	return nil
+}
+
+func runSync(args []string) error {
+	fs, dbPath, jsonOut := newFlagSet("sync")
+	configPath := fs.String("config", "", "config file path")
+	if err := parseFlags(fs, args); err != nil {
+		return err
+	}
+
+	path := *configPath
+	if path == "" {
+		var err error
+		if path, err = defaultConfigPath(); err != nil {
+			return err
+		}
+	}
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+	store, err := openStore(ctx, *dbPath)
+	if err != nil {
+		return err
+	}
+	defer store.Close()
+
+	results, err := syncSources(ctx, store, cfg, fs.Args())
+	if err != nil {
+		return err
+	}
+
+	failed := 0
+	if *jsonOut {
+		if err := printJSON(map[string]any{"sources": results}); err != nil {
+			return err
+		}
+		for _, r := range results {
+			if r.Error != "" {
+				failed++
+			}
+		}
+	} else {
+		for _, r := range results {
+			if r.Error != "" {
+				failed++
+				fmt.Printf("%s: FAILED: %s\n", r.Label, r.Error)
+				continue
+			}
+			in := r.Ingest
+			fmt.Printf("%s: %d files (%d video, %d audio, %d other), %d titles\n",
+				r.Label, in.Files, in.Videos, in.Audio, in.Other, in.Titles)
+		}
+	}
+	if failed > 0 {
+		return &CLIError{Code: "sync", Message: fmt.Sprintf("%d of %d sources failed", failed, len(results)), ExitCode: 1}
+	}
+	return nil
 }
 
 func runIngest(args []string) error {
