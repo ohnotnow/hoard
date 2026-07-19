@@ -70,7 +70,7 @@ hoard titles           # the full table, long tail included
 hoard alias list       # aliases a human has already confirmed
 ```
 
-Check with the user that `hoard sources` covers every drive they care about — an old drive missing from the catalogue skews the whole profile. If a source looks stale, offer `hoard sync` (it re-reads a `find` listing; still read-only towards the media).
+Check with the user that `hoard sources` covers every drive they care about — an old drive missing from the catalogue skews the whole profile. If a source looks stale, offer `hoard sync` (it re-reads a `find` listing; still read-only towards the media). If the answer reveals a drive or folder that isn't catalogued at all, offer to add it before profiling: invoke the `hoard-init` skill for the interview (label, location, generic names), sync the new source, then return here. A profile built around a known gap is a worse product than a five-minute detour — but adding sources is always an offer, never a by-the-way.
 
 Spot-check a few head titles and a few oddities against raw paths before trusting them:
 

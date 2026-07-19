@@ -108,6 +108,7 @@ gets the methodology along with the tool:
 | `hoard-init` | Conversational setup: interviews you about your drives and boxes, verifies access read-only, writes the config, runs the first sync. |
 | `hoard-viewer-profile` | Builds a viewer profile from the catalogue ("what does my collection say about me?") and saves it beside the database. Works without hoard too, via a bundled Python pipeline. |
 | `hoard-recommend` | Profile-aware recommendations that check every candidate against the catalogue first — so nothing you already own is ever "recommended". |
+| `hoard-rot-survey` | Tiered, read-only drive-health survey ("how much of this drive is actually gubbed?"): census, ffprobe sweep, null-pattern triage, sampled decode — then hoard-backed coverage checks to tell genuine losses from clutter. |
 
 Project-scoped skills only fire when Claude Code runs inside this clone,
 which suits `hoard-init` (you have just cloned it) but not the other two —
