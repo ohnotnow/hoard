@@ -115,6 +115,65 @@ func TestIngestAndHave(t *testing.T) {
 	})
 }
 
+func TestHavePathsFallback(t *testing.T) {
+	ctx := context.Background()
+	s := newTestStore(t)
+	paths := append(append([]string{}, testPaths...),
+		"/mnt/media/skorpion/episode one.avi",
+		"/mnt/media/skorpion/episode two.avi",
+		"/mnt/media/TV/The.Omega.Factor/The.Omega.Factor.S01E01.avi",
+	)
+	if _, err := s.Ingest(ctx, "ssd", paths, nil); err != nil {
+		t.Fatalf("ingest: %v", err)
+	}
+
+	// Spelled-out episode numbers defeat the canonicaliser: the files are
+	// titled "episode one"/"episode two", so the title search misses...
+	matches, err := s.Have(ctx, "skorpion", false)
+	if err != nil {
+		t.Fatalf("have: %v", err)
+	}
+	if len(matches) != 0 {
+		t.Fatalf("expected no title matches, got %+v", matches)
+	}
+
+	// ...and the path fallback still finds them.
+	found, pattern, err := s.HavePaths(ctx, "skorpion")
+	if err != nil {
+		t.Fatalf("have paths: %v", err)
+	}
+	if len(found) != 2 {
+		t.Errorf("path matches = %v", found)
+	}
+	if pattern != "skorpion" {
+		t.Errorf("pattern = %q", pattern)
+	}
+
+	t.Run("separator agnostic", func(t *testing.T) {
+		// A spaced query must match dotted filenames.
+		found, pattern, err := s.HavePaths(ctx, "the omega factor")
+		if err != nil {
+			t.Fatalf("have paths: %v", err)
+		}
+		if len(found) != 1 {
+			t.Errorf("path matches = %v", found)
+		}
+		if want := "the[^a-z0-9]+omega[^a-z0-9]+factor"; pattern != want {
+			t.Errorf("pattern = %q, want %q", pattern, want)
+		}
+	})
+
+	t.Run("miss", func(t *testing.T) {
+		found, _, err := s.HavePaths(ctx, "the sweeney")
+		if err != nil {
+			t.Fatalf("have paths: %v", err)
+		}
+		if len(found) != 0 {
+			t.Errorf("path matches = %v", found)
+		}
+	})
+}
+
 func TestAliases(t *testing.T) {
 	ctx := context.Background()
 	s := newTestStore(t)

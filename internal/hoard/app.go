@@ -295,16 +295,32 @@ func runHave(args []string) error {
 	if err != nil {
 		return err
 	}
-	if *jsonOut {
-		if err := printJSON(map[string]any{"query": query, "matches": matches}); err != nil {
+	pathMatches, pattern := []string{}, ""
+	if len(matches) == 0 {
+		pathMatches, pattern, err = store.HavePaths(ctx, query)
+		if err != nil {
 			return err
 		}
-	} else if len(matches) == 0 {
-		fmt.Printf("no matches for %q\n", query)
-	} else {
-		printMatches(matches)
+		if pathMatches == nil {
+			pathMatches = []string{}
+		}
 	}
-	if len(matches) == 0 {
+	if *jsonOut {
+		out := map[string]any{"query": query, "matches": matches}
+		if len(matches) == 0 {
+			out["path_matches"] = pathMatches
+		}
+		if err := printJSON(out); err != nil {
+			return err
+		}
+	} else if len(matches) > 0 {
+		printMatches(matches)
+	} else if len(pathMatches) > 0 {
+		printPathMatches(query, pattern, pathMatches)
+	} else {
+		fmt.Printf("no matches for %q\n", query)
+	}
+	if len(matches) == 0 && len(pathMatches) == 0 {
 		return noMatch()
 	}
 	return nil

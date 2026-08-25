@@ -237,6 +237,25 @@ func (s *Store) Have(ctx context.Context, query string, loose bool) ([]TitleMatc
 	return matches, nil
 }
 
+// HavePaths is the raw-path fallback behind `have`: the query words, in
+// order, separated by any non-alphanumeric run, matched case-insensitively
+// over every stored path. It exists for files the canonicaliser mis-titled
+// (a folder of "episode two.avi" style names), so they stay findable without
+// renaming anything. Returns the matching paths and the pattern used, so
+// callers can hand the pattern on to `hoard grep`.
+func (s *Store) HavePaths(ctx context.Context, query string) ([]string, string, error) {
+	key := normKey(query)
+	if key == "" {
+		return nil, "", validationError("query normalises to nothing: " + query)
+	}
+	pattern := strings.Join(strings.Fields(key), "[^a-z0-9]+")
+	paths, err := s.Grep(ctx, pattern)
+	if err != nil {
+		return nil, "", err
+	}
+	return paths, pattern, nil
+}
+
 func (s *Store) titleMatch(ctx context.Context, id int64) (TitleMatch, error) {
 	var m TitleMatch
 	err := s.db.QueryRowContext(ctx, `

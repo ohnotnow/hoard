@@ -54,7 +54,7 @@ Classify each candidate:
 - **Uncertain / possible alias** — a near-miss or odd grep hit → inspect the matching paths before deciding; if it turns out to be the same programme under another name, offer `hoard alias add TITLE ALIAS` so the catalogue learns it permanently.
 - **Already present** — do not recommend as new. If it fits the request beautifully, celebrate the rediscovery instead: "you already own this — all ten episodes, on the old drive" is a genuinely good answer.
 
-Exit codes make the check scriptable: `hoard have` returns 0 on found, 1 on ran-fine-but-nothing-matched.
+Exit codes make the check scriptable: `hoard have` returns 0 on found, 1 on ran-fine-but-nothing-matched. When no canonical title matches, `have` falls back to a raw-path search itself and reports "matching paths" (still exit 0) - treat those hits as owned files whose title the canonicaliser mangled, and inspect the paths as for any near-miss.
 
 ## Step 4: Present the Shortlist
 

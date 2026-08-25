@@ -78,7 +78,7 @@ hostnames belong on your machine, not in version control.
 |---|---|
 | `sync [LABEL]...` | Fetch and ingest every configured source (or just the named ones). `--config PATH` overrides the config location. |
 | `ingest --source LABEL (FILE\|-)` | Replace a source's snapshot from a path listing. `--generic NAME` (repeatable) marks extra folder/drive labels as non-titles. |
-| `have QUERY` | Look a title up (exact, then substring; `--loose` adds all-words matching). Alias-aware. |
+| `have QUERY` | Look a title up (exact, then substring; `--loose` adds all-words matching). Alias-aware. When no title matches, falls back to a raw-path search so mis-canonicalised files (a folder of `episode two.avi` names) are still found. |
 | `alias add TITLE ALIAS` | Teach it that `gsm` means *Game, Set and Match*. Also `alias rm`, `alias list`. |
 | `grep REGEX` | Case-insensitive regex over every raw path. |
 | `titles` | The canonical title table (`--min-items N` to trim the long tail). |

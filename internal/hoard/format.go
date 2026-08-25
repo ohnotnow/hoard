@@ -28,6 +28,23 @@ func printMatches(matches []TitleMatch) {
 	}
 }
 
+// Path-fallback listings are capped; the full set is one grep away.
+const pathMatchCap = 25
+
+func printPathMatches(query, pattern string, paths []string) {
+	fmt.Printf("no title match for %q; matching paths:\n", query)
+	shown := paths
+	if len(shown) > pathMatchCap {
+		shown = shown[:pathMatchCap]
+	}
+	for _, p := range shown {
+		fmt.Printf("  %s\n", p)
+	}
+	if rest := len(paths) - len(shown); rest > 0 {
+		fmt.Printf("  ... and %d more (hoard grep '%s' lists all)\n", rest, pattern)
+	}
+}
+
 func printTitles(titles []TitleRow) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
 	fmt.Fprintln(w, "ITEMS\tVIDEO\tAUDIO\tSOURCES\tTITLE")
