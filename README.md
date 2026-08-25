@@ -85,7 +85,8 @@ hostnames belong on your machine, not in version control.
 | `sources` | Drives/snapshots with last-ingest times. |
 | `stats` | Totals, per-source breakdown, extension counts. |
 | `config` | Show resolved config/db paths and status; `config init` writes a starter config. |
-| `version` | Print the version. |
+| `version` | Print the version, and check GitHub for a newer release. |
+| `self-update` | Download the latest release binary for this platform, verify it against SHA256SUMS, and replace the running executable (`composer self-update` style). `--check` reports without downloading (exit 0 current / 1 newer available / 2 lookup failed); `--yes` skips the prompt. Redirects to `brew upgrade` / `go install` when the binary is package-manager owned. |
 
 All commands take `--db PATH` (default: `<user-config-dir>/hoard/library.db`)
 and `--json` for machine-readable output.

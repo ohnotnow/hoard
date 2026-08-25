@@ -24,6 +24,7 @@ Usage:
   hoard stats [--json]
   hoard config [init] [--json]
   hoard version
+  hoard self-update [--check] [--yes]
 
 All commands accept --db PATH (default: <user-config-dir>/hoard/library.db).
 
@@ -55,8 +56,9 @@ func Run(args []string) error {
 	case "config":
 		return runConfig(rest)
 	case "version":
-		fmt.Println(Version)
-		return nil
+		return runVersion()
+	case "self-update":
+		return runSelfUpdateCmd(rest)
 	case "help", "-h", "--help":
 		fmt.Println(usageText)
 		return nil
