@@ -163,78 +163,84 @@ func upsertTitle(ctx context.Context, tx *sql.Tx, key, display string) (int64, e
 	return id, err
 }
 
-// Have looks a query up against canonical titles and aliases: exact key
-// match first, then substring, then (with loose) all-words matching.
-func (s *Store) Have(ctx context.Context, query string, loose bool) ([]TitleMatch, error) {
+// Have looks a query up against canonical titles and aliases. Every stage
+// always runs and the results are ranked best first, so a hit in one stage
+// never hides a hit in another: two productions of one title are routinely
+// filed as "melissa" and "melissa1974", and a search for either "melissa" or
+// "melissa 1974" has to surface both.
+func (s *Store) Have(ctx context.Context, query string) ([]TitleMatch, error) {
 	key := normKey(query)
 	if key == "" {
 		return nil, validationError("query normalises to nothing: " + query)
 	}
 
+	var wordConds []string
+	var wordArgs []any
+	for _, word := range strings.Fields(key) {
+		wordConds = append(wordConds, "(t.key LIKE '%' || ? || '%' OR a.alias_key LIKE '%' || ? || '%')")
+		wordArgs = append(wordArgs, word, word)
+	}
+
 	stages := []struct {
-		sql  string
-		args []any
+		where string
+		args  []any
 	}{
-		{`SELECT DISTINCT t.id FROM titles t
-			LEFT JOIN aliases a ON a.title_id = t.id
-			WHERE t.key = ? OR a.alias_key = ?`, []any{key, key}},
-		{`SELECT DISTINCT t.id FROM titles t
-			LEFT JOIN aliases a ON a.title_id = t.id
-			WHERE t.key LIKE '%' || ? || '%' OR a.alias_key LIKE '%' || ? || '%'`, []any{key, key}},
+		// Exact.
+		{"t.key = ? OR a.alias_key = ?", []any{key, key}},
+		// The whole phrase as a substring.
+		{"t.key LIKE '%' || ? || '%' OR a.alias_key LIKE '%' || ? || '%'", []any{key, key}},
+		// Every query word somewhere in the key, in any order.
+		{strings.Join(wordConds, " AND "), wordArgs},
 		// Reverse containment: the stored key appears word-bounded inside a
 		// longer query ("the omega factor" finds key "omega factor").
-		{`SELECT DISTINCT t.id FROM titles t
-			LEFT JOIN aliases a ON a.title_id = t.id
-			WHERE ' ' || ? || ' ' LIKE '% ' || t.key || ' %'
-			   OR ' ' || ? || ' ' LIKE '% ' || a.alias_key || ' %'`, []any{key, key}},
-	}
-	if loose {
-		var conds []string
-		var args []any
-		for _, word := range strings.Fields(key) {
-			conds = append(conds, "t.key LIKE '%' || ? || '%'")
-			args = append(args, word)
-		}
-		stages = append(stages, struct {
-			sql  string
-			args []any
-		}{"SELECT t.id FROM titles t WHERE " + strings.Join(conds, " AND "), args})
+		{`' ' || ? || ' ' LIKE '% ' || t.key || ' %'
+			OR ' ' || ? || ' ' LIKE '% ' || a.alias_key || ' %'`, []any{key, key}},
 	}
 
-	var ids []int64
+	seen := map[int64]bool{}
+	matches := []TitleMatch{}
 	for _, stage := range stages {
-		rows, err := s.db.QueryContext(ctx, stage.sql, stage.args...)
+		ids, err := s.titleIDs(ctx, stage.where, stage.args...)
 		if err != nil {
 			return nil, err
 		}
-		for rows.Next() {
-			var id int64
-			if err := rows.Scan(&id); err != nil {
-				rows.Close()
+		var group []TitleMatch
+		for _, id := range ids {
+			if seen[id] {
+				continue
+			}
+			seen[id] = true
+			match, err := s.titleMatch(ctx, id)
+			if err != nil {
 				return nil, err
 			}
-			ids = append(ids, id)
+			group = append(group, match)
 		}
-		if err := rows.Err(); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		rows.Close()
-		if len(ids) > 0 {
-			break
-		}
+		sortMatches(group)
+		matches = append(matches, group...)
 	}
-
-	matches := make([]TitleMatch, 0, len(ids))
-	for _, id := range ids {
-		match, err := s.titleMatch(ctx, id)
-		if err != nil {
-			return nil, err
-		}
-		matches = append(matches, match)
-	}
-	sortMatches(matches)
 	return matches, nil
+}
+
+// titleIDs returns the ids of titles whose key or aliases satisfy where.
+func (s *Store) titleIDs(ctx context.Context, where string, args ...any) ([]int64, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT DISTINCT t.id FROM titles t
+		LEFT JOIN aliases a ON a.title_id = t.id
+		WHERE `+where, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }
 
 // HavePaths is the raw-path fallback behind `have`: the query words, in

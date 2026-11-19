@@ -32,7 +32,7 @@ hoard ingest --source ssd ssd-paths.txt
 
 # 3. Ask questions:
 hoard have 'the omega factor'
-hoard have --loose 'omega'
+hoard have 'factor omega'      # word order doesn't matter
 hoard grep 'play.for.today'
 hoard titles --min-items 5
 ```
@@ -78,7 +78,7 @@ hostnames belong on your machine, not in version control.
 |---|---|
 | `sync [LABEL]...` | Fetch and ingest every configured source (or just the named ones). `--config PATH` overrides the config location. |
 | `ingest --source LABEL (FILE\|-)` | Replace a source's snapshot from a path listing. `--generic NAME` (repeatable) marks extra folder/drive labels as non-titles. |
-| `have QUERY` | Look a title up (exact, then substring; `--loose` adds all-words matching). Alias-aware. When no title matches, falls back to a raw-path search so mis-canonicalised files (a folder of `episode two.avi` names) are still found. |
+| `have QUERY` | Look a title up. Every kind of match is shown, best first: exact, then titles containing the whole phrase, then titles containing all the words in any order, then titles that sit inside a longer query. So `melissa` and `melissa 1974` both show `Melissa` and `Melissa1974`. Alias-aware. (`--loose` is still accepted but no longer does anything.) When no title matches, falls back to a raw-path search so mis-canonicalised files (a folder of `episode two.avi` names) are still found. |
 | `alias add TITLE ALIAS` | Teach it that `gsm` means *Game, Set and Match*. Also `alias rm`, `alias list`. |
 | `grep REGEX` | Case-insensitive regex over every raw path. |
 | `titles` | The canonical title table (`--min-items N` to trim the long tail). |

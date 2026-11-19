@@ -91,7 +91,7 @@ For each casualty, ask hoard whether a healthy copy exists anywhere else:
 
 ```bash
 hoard grep --json 'the.doll|bat out of hell'   # raw paths, all sources
-hoard have --loose 'francis durbridge'
+hoard have 'francis durbridge'
 ```
 
 Classify: **covered elsewhere** (healthy copy on another source — verify it, then celebrate), **covered on-drive** (e.g. `lost+found` fsck orphans duplicating files that exist properly — check before mourning), or **genuinely lost**.

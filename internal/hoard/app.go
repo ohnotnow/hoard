@@ -16,7 +16,7 @@ const usageText = `hoard — what does this media library actually contain?
 Usage:
   hoard sync [--config PATH] [LABEL]...
   hoard ingest --source LABEL [--generic NAME]... (FILE|-)
-  hoard have [--loose] [--json] QUERY
+  hoard have [--json] QUERY
   hoard alias add TITLE ALIAS | alias rm ALIAS | alias list [--json]
   hoard grep [--json] REGEX
   hoard titles [--min-items N] [--json]
@@ -277,7 +277,7 @@ func readPaths(arg string) ([]string, error) {
 
 func runHave(args []string) error {
 	fs, dbPath, jsonOut := newFlagSet("have")
-	loose := fs.Bool("loose", false, "fall back to all-words matching")
+	fs.Bool("loose", false, "no longer needed: all-words matching is always on")
 	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
@@ -293,7 +293,7 @@ func runHave(args []string) error {
 	}
 	defer store.Close()
 
-	matches, err := store.Have(ctx, query, *loose)
+	matches, err := store.Have(ctx, query)
 	if err != nil {
 		return err
 	}

@@ -50,7 +50,7 @@ func TestIngestAndHave(t *testing.T) {
 	}
 
 	t.Run("exact match", func(t *testing.T) {
-		matches, err := s.Have(ctx, "fawlty towers", false)
+		matches, err := s.Have(ctx, "fawlty towers")
 		if err != nil {
 			t.Fatalf("have: %v", err)
 		}
@@ -67,7 +67,7 @@ func TestIngestAndHave(t *testing.T) {
 	})
 
 	t.Run("substring match", func(t *testing.T) {
-		matches, err := s.Have(ctx, "expectations", false)
+		matches, err := s.Have(ctx, "expectations")
 		if err != nil {
 			t.Fatalf("have: %v", err)
 		}
@@ -76,15 +76,15 @@ func TestIngestAndHave(t *testing.T) {
 		}
 	})
 
-	t.Run("loose match", func(t *testing.T) {
-		matches, err := s.Have(ctx, "towers fawlty nonsense", true)
+	t.Run("all-words match", func(t *testing.T) {
+		matches, err := s.Have(ctx, "towers fawlty nonsense")
 		if err != nil {
 			t.Fatalf("have: %v", err)
 		}
 		if len(matches) != 0 {
 			t.Errorf("all-words with junk word should miss, got %+v", matches)
 		}
-		matches, err = s.Have(ctx, "towers fawlty", true)
+		matches, err = s.Have(ctx, "towers fawlty")
 		if err != nil {
 			t.Fatalf("have: %v", err)
 		}
@@ -95,7 +95,7 @@ func TestIngestAndHave(t *testing.T) {
 
 	t.Run("reverse containment", func(t *testing.T) {
 		// Stored key lacks the article; a longer query must still find it.
-		matches, err := s.Have(ctx, "the fawlty towers", false)
+		matches, err := s.Have(ctx, "the fawlty towers")
 		if err != nil {
 			t.Fatalf("have: %v", err)
 		}
@@ -105,12 +105,69 @@ func TestIngestAndHave(t *testing.T) {
 	})
 
 	t.Run("miss", func(t *testing.T) {
-		matches, err := s.Have(ctx, "the omega factor", false)
+		matches, err := s.Have(ctx, "the omega factor")
 		if err != nil {
 			t.Fatalf("have: %v", err)
 		}
 		if len(matches) != 0 {
 			t.Errorf("expected no matches, got %+v", matches)
+		}
+	})
+}
+
+func TestHaveExactMatchKeepsSubstringMatches(t *testing.T) {
+	ctx := context.Background()
+	s := newTestStore(t)
+	paths := append(append([]string{}, testPaths...),
+		"/mnt/media/Francis Durbridge Presents Volume 1/Melissa, part 1.avi",
+		"/mnt/media/video/Melissa1974/Melissa1974-1.avi",
+		"/mnt/media/video/Melissa1974/Melissa1974-2.avi",
+		"/mnt/media/TV/Inside the Fawlty Towers Hotel/Inside the Fawlty Towers Hotel.mkv",
+	)
+	if _, err := s.Ingest(ctx, "ssd", paths, nil); err != nil {
+		t.Fatalf("ingest: %v", err)
+	}
+
+	matches, err := s.Have(ctx, "melissa")
+	if err != nil {
+		t.Fatalf("have: %v", err)
+	}
+	if len(matches) != 2 {
+		t.Fatalf("matches = %+v, want the exact title and the 1974 one", matches)
+	}
+	// The exact key leads even though the other title has more files.
+	if matches[0].Key != "melissa" || matches[1].Key != "melissa1974" {
+		t.Errorf("order = %q, %q; want melissa, melissa1974", matches[0].Key, matches[1].Key)
+	}
+
+	t.Run("spaced query finds the unspaced key", func(t *testing.T) {
+		// "melissa 1974" is neither exact nor a substring of "melissa1974";
+		// only all-words matching finds it, and it must not be hidden by the
+		// plain "melissa" key sitting word-bounded inside the query.
+		matches, err := s.Have(ctx, "melissa 1974")
+		if err != nil {
+			t.Fatalf("have: %v", err)
+		}
+		if len(matches) != 2 {
+			t.Fatalf("matches = %+v, want both productions", matches)
+		}
+		if matches[0].Key != "melissa1974" || matches[1].Key != "melissa" {
+			t.Errorf("order = %q, %q; want melissa1974, melissa", matches[0].Key, matches[1].Key)
+		}
+	})
+
+	t.Run("a phrase match does not hide reverse containment", func(t *testing.T) {
+		// "inside the fawlty towers hotel" contains the whole query, but the
+		// article-less "fawlty towers" key must still be returned after it.
+		matches, err := s.Have(ctx, "the fawlty towers")
+		if err != nil {
+			t.Fatalf("have: %v", err)
+		}
+		if len(matches) != 2 {
+			t.Fatalf("matches = %+v, want both titles", matches)
+		}
+		if matches[0].Key != "inside the fawlty towers hotel" || matches[1].Key != "fawlty towers" {
+			t.Errorf("order = %q, %q", matches[0].Key, matches[1].Key)
 		}
 	})
 }
@@ -129,7 +186,7 @@ func TestHavePathsFallback(t *testing.T) {
 
 	// Spelled-out episode numbers defeat the canonicaliser: the files are
 	// titled "episode one"/"episode two", so the title search misses...
-	matches, err := s.Have(ctx, "skorpion", false)
+	matches, err := s.Have(ctx, "skorpion")
 	if err != nil {
 		t.Fatalf("have: %v", err)
 	}
@@ -189,7 +246,7 @@ func TestAliases(t *testing.T) {
 		t.Errorf("display = %q", display)
 	}
 
-	matches, err := s.Have(ctx, "gsm", false)
+	matches, err := s.Have(ctx, "gsm")
 	if err != nil {
 		t.Fatalf("have via alias: %v", err)
 	}
@@ -225,7 +282,7 @@ func TestSnapshotReplace(t *testing.T) {
 	}
 
 	// Game Set and Match vanished from the drive, so its title should be gone.
-	matches, err := s.Have(ctx, "game set and match", false)
+	matches, err := s.Have(ctx, "game set and match")
 	if err != nil {
 		t.Fatalf("have: %v", err)
 	}

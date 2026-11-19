@@ -41,8 +41,7 @@ Do not show this raw list to the user. Unchecked candidates are exactly the outp
 For each candidate, in order of laziness:
 
 ```bash
-hoard have 'the guardians'            # exact, then substring
-hoard have --loose 'guardians'        # all-words matching
+hoard have 'the guardians'            # exact, phrase and all-words matches, best first
 hoard grep 'guardian'                 # regex over every raw path
 ```
 
@@ -50,7 +49,7 @@ Search the forms a filename would actually take: original-language titles (`Rejs
 
 Classify each candidate:
 
-- **Absent with reasonable confidence** — exact, loose, and grep all blank → safe to recommend.
+- **Absent with reasonable confidence** — `have` and `grep` both blank → safe to recommend.
 - **Uncertain / possible alias** — a near-miss or odd grep hit → inspect the matching paths before deciding; if it turns out to be the same programme under another name, offer `hoard alias add TITLE ALIAS` so the catalogue learns it permanently.
 - **Already present** — do not recommend as new. If it fits the request beautifully, celebrate the rediscovery instead: "you already own this — all ten episodes, on the old drive" is a genuinely good answer.
 

@@ -83,7 +83,7 @@ func TestSyncSourcesLocal(t *testing.T) {
 		t.Errorf("broken source should have failed: %+v", results[1])
 	}
 
-	matches, err := s.Have(ctx, "example show", false)
+	matches, err := s.Have(ctx, "example show")
 	if err != nil {
 		t.Fatalf("have: %v", err)
 	}
