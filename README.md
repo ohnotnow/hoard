@@ -96,12 +96,15 @@ and `--json` for machine-readable output.
 | Code | Meaning |
 |---|---|
 | 0 | success / found |
-| 1 | query ran fine but matched nothing (scriptable: `hoard have 'x' && echo owned`) |
+| 1 | query ran fine but matched nothing (scriptable: `hoard have 'x' && echo owned`); also a `sync` where any source failed, or an internal error |
 | 64 / 65 / 66 | usage / validation / not found |
+
+`self-update --check` has its own meanings: 0 current, 1 newer release
+available, 2 the release lookup failed.
 
 ## Skills for Claude
 
-The repo carries three Claude Code skills in `.claude/skills/`, so a clone
+The repo carries four Claude Code skills in `.claude/skills/`, so a clone
 gets the methodology along with the tool:
 
 | Skill | What it does |
@@ -112,7 +115,7 @@ gets the methodology along with the tool:
 | `hoard-rot-survey` | Tiered, read-only drive-health survey ("how much of this drive is actually gubbed?"): census, ffprobe sweep, null-pattern triage, sampled decode — then hoard-backed coverage checks to tell genuine losses from clutter. |
 
 Project-scoped skills only fire when Claude Code runs inside this clone,
-which suits `hoard-init` (you have just cloned it) but not the other two —
+which suits `hoard-init` (you have just cloned it) but not the other three —
 their real life is months later, in some unrelated directory, wondering
 "do I already have that?". Promote them:
 
@@ -140,7 +143,8 @@ go build -o hoard .
 go test ./...
 ```
 
-Stdlib + `modernc.org/sqlite` (pure Go) + `golang.org/x/text`; no CGo, so it
+Stdlib + `modernc.org/sqlite` (pure Go) + `golang.org/x/text` +
+`gopkg.in/yaml.v3`; no CGo, so it
 cross-compiles cleanly. Releases are built by `.github/workflows/release.yml`
 on version tags.
 
